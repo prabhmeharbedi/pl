@@ -1,0 +1,38 @@
+Rent Increase Regulations
+
+
+                # Rent Increase Regulations
+                
+                ## During Fixed-Term Leases
+                
+                In most jurisdictions, landlords cannot increase rent during a fixed-term lease unless:
+                
+                1. The lease specifically allows for it
+                2. The tenant agrees to the increase in writing
+                3. There is a government-authorized increase
+                
+                ## For Month-to-Month Tenancies
+                
+                For month-to-month agreements, landlords typically must provide notice before increasing rent:
+                
+                - 30 days notice for increases under 10% (in many jurisdictions)
+                - 60-90 days notice for larger increases (varies by location)
+                
+                ## Rent Control Areas
+                
+                Many cities have rent control or rent stabilization laws that limit:
+                
+                1. How much rent can be increased (often tied to inflation)
+                2. How frequently increases can occur (typically once per year)
+                3. What justifications are required for increases
+                
+                ## Best Practices for Tenants
+                
+                If you receive a rent increase notice:
+                
+                1. Check if it complies with local laws
+                2. Verify proper notice was given
+                3. Determine if your unit is subject to rent control
+                4. Consider negotiating if the increase seems excessive
+                5. Get any agreements in writing
+            

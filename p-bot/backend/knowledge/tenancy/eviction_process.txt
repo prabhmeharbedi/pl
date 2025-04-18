@@ -1,0 +1,54 @@
+Eviction Process and Tenant Rights
+
+
+                # Eviction Process and Tenant Rights
+                
+                ## Legal Grounds for Eviction
+                
+                Most jurisdictions require landlords to have legal cause for eviction, such as:
+                
+                1. Non-payment of rent
+                2. Lease violations
+                3. Property damage
+                4. Illegal activities
+                5. Expiration of lease (in some areas)
+                6. Owner move-in (in some areas)
+                
+                ## Required Notice
+                
+                Landlords must provide written notice before beginning eviction proceedings:
+                
+                - Non-payment of rent: 3-10 days notice (varies by location)
+                - Lease violations: 10-30 days notice to cure or vacate
+                - No-fault evictions: 30-90 days notice (where permitted)
+                
+                ## The Legal Process
+                
+                Proper eviction requires:
+                
+                1. Written notice with specific reasons and timeframe
+                2. Court filing if tenant doesn't comply with notice
+                3. Court hearing where both parties can present their case
+                4. Court judgment and order for eviction if landlord prevails
+                5. Enforcement by sheriff/constable (not the landlord directly)
+                
+                ## Illegal Eviction Tactics
+                
+                Landlords CANNOT legally:
+                
+                1. Change locks without court order
+                2. Remove tenant's belongings
+                3. Shut off utilities
+                4. Use threats or intimidation
+                5. Remove doors or windows
+                
+                ## Tenant Defenses
+                
+                Possible defenses against eviction include:
+                
+                1. Improper notice or procedure
+                2. Retaliation for reporting code violations
+                3. Discrimination
+                4. Acceptance of partial rent (in some cases)
+                5. Failure to maintain habitable housing
+            
