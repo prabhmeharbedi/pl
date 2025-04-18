@@ -1,0 +1,17 @@
+Framework Analysis:
+Agno (https://github.com/agno-agi/agno) offers several advantages for your project:
+
+Native multi-agent architecture with routing, collaboration, and coordination modes
+Built-in support for multimodal inputs (critical for your image analysis agent)
+Lightweight and fast performance (3μs instantiation time)
+First-class reasoning capabilities for complex property issue analysis
+Long-term memory and session storage for context maintenance
+Built-in monitoring tools
+
+Google ADK (https://google.github.io/adk-docs/) provides:
+
+Flexible orchestration with workflow agents
+LLM-driven dynamic routing capabilities
+Multi-agent architecture support
+Built-in evaluation tools
+Deployment options via Vertex AI Agent Engine
