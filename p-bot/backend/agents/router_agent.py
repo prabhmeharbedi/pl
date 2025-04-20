@@ -56,39 +56,67 @@ class RouterAgent(BaseAgent):
             "followed by a brief explanation of why."
         )
         
-        # Get response from the router agent
-        response = await super().process(routing_message, session_id, **routing_context)
-        
-        # Parse the response to determine the route
-        response_text = response["response"].lower()
-        
-        # Check which agent is mentioned first in the response
-        if "issue_detection" in response_text and "tenancy_faq" in response_text:
-            # Both are mentioned, check which comes first
-            idx_issue = response_text.find("issue_detection")
-            idx_tenancy = response_text.find("tenancy_faq")
+        try:
+            # Get response from the router agent
+            response = await super().process(routing_message, session_id, **routing_context)
             
-            if idx_issue < idx_tenancy and idx_issue != -1:
-                target_agent = "issue_detection"
+            # Extract the text content from the response
+            response_text = ""
+            if isinstance(response, dict) and "response" in response:
+                response_text = response["response"]
+            elif hasattr(response, "content") and response.content:
+                response_text = response.content
+            elif hasattr(response, "response") and response.response:
+                response_text = response.response
             else:
+                response_text = str(response)
+            
+            # Make sure we have a string
+            if not isinstance(response_text, str):
+                response_text = str(response_text)
+                
+            # Convert to lowercase for easier matching
+            response_text = response_text.lower()
+            
+            # Check which agent is mentioned first in the response
+            if "issue_detection" in response_text and "tenancy_faq" in response_text:
+                # Both are mentioned, check which comes first
+                idx_issue = response_text.find("issue_detection")
+                idx_tenancy = response_text.find("tenancy_faq")
+                
+                if idx_issue < idx_tenancy and idx_issue != -1:
+                    target_agent = "issue_detection"
+                else:
+                    target_agent = "tenancy_faq"
+            elif "issue_detection" in response_text:
+                target_agent = "issue_detection"
+            elif "tenancy_faq" in response_text or "tenancy" in response_text:
                 target_agent = "tenancy_faq"
-        elif "issue_detection" in response_text:
-            target_agent = "issue_detection"
-        elif "tenancy_faq" in response_text or "tenancy" in response_text:
-            target_agent = "tenancy_faq"
-        else:
-            # Default to the issue detection agent if unclear
-            target_agent = "issue_detection"
+            else:
+                # Default to the issue detection agent if unclear
+                target_agent = "issue_detection"
+            
+            # Extract the explanation from the response
+            explanation_parts = response_text.split(target_agent, 1)
+            explanation = explanation_parts[1].strip() if len(explanation_parts) > 1 else "Based on query content"
+            
+            # Clean up explanation
+            explanation = explanation.lstrip(" -:.")
+            
+            return {
+                "agent": target_agent,
+                "confidence": 0.9,  # We're fairly confident in the router's decision
+                "explanation": explanation
+            }
         
-        # Extract the explanation from the response
-        explanation_parts = response_text.split(target_agent, 1)
-        explanation = explanation_parts[1].strip() if len(explanation_parts) > 1 else "Based on query content"
-        
-        # Clean up explanation
-        explanation = explanation.lstrip(" -:.")
-        
-        return {
-            "agent": target_agent,
-            "confidence": 0.9,  # We're fairly confident in the router's decision
-            "explanation": explanation
-        } 
+        except Exception as e:
+            print(f"Error in router: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            # Default to issue detection as fallback
+            return {
+                "agent": "issue_detection",
+                "confidence": 0.5,
+                "explanation": "Defaulting to Issue Detection Agent due to routing error"
+            } 

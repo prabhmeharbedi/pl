@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 from typing import Dict, Any
 
 from agents import TenancyFAQAgent
@@ -10,13 +11,17 @@ def load_initial_knowledge():
     try:
         # Get the knowledge directory
         knowledge_dir = Path(__file__).resolve().parent.parent / "knowledge"
-        knowledge_dir.mkdir(exist_ok=True)
+        os.makedirs(knowledge_dir, exist_ok=True)
         
         # Create the tenancy FAQ knowledge directory
         tenancy_knowledge_dir = knowledge_dir / "tenancy"
-        tenancy_knowledge_dir.mkdir(exist_ok=True)
+        os.makedirs(tenancy_knowledge_dir, exist_ok=True)
         
-        # Create or load initial knowledge
+        # Get the tenancy agent from the manager
+        agent_manager = AgentManager()
+        tenancy_agent = agent_manager.tenancy_faq
+        
+        # Process JSON knowledge
         sample_knowledge_file = tenancy_knowledge_dir / "sample_tenancy_knowledge.json"
         
         if not sample_knowledge_file.exists():
@@ -31,26 +36,59 @@ def load_initial_knowledge():
             with open(sample_knowledge_file, "r") as f:
                 sample_knowledge = json.load(f)
         
-        # Get the tenancy agent from the manager
-        agent_manager = AgentManager()
-        tenancy_agent = agent_manager.tenancy_faq
-        
-        # Add the knowledge to the agent
+        # Add the JSON knowledge to the agent
+        knowledge_count = 0
         for doc_id, doc in sample_knowledge.items():
-            tenancy_agent.add_knowledge_text(
-                id=doc_id,
-                title=doc["title"],
-                content=doc["content"]
-            )
+            try:
+                tenancy_agent.add_knowledge_text(
+                    id=doc_id,
+                    title=doc["title"],
+                    content=doc["content"]
+                )
+                knowledge_count += 1
+            except Exception as e:
+                print(f"Error adding knowledge document {doc_id}: {str(e)}")
+        
+        # Process all text files in the tenancy directory
+        for txt_file in tenancy_knowledge_dir.glob("*.txt"):
+            try:
+                # Skip the sample file
+                if txt_file.name == "sample.txt":
+                    continue
+                    
+                # Read the file content
+                with open(txt_file, "r") as f:
+                    content = f.read()
+                
+                # Extract title from first line (assumed to be a markdown heading)
+                lines = content.split("\n")
+                title = lines[0].replace("#", "").strip() if lines else txt_file.stem
+                
+                # Use filename as ID
+                doc_id = txt_file.stem
+                
+                # Add to knowledge base
+                tenancy_agent.add_knowledge_text(
+                    id=doc_id,
+                    title=title,
+                    content=content
+                )
+                knowledge_count += 1
+                print(f"Added knowledge from {txt_file.name}")
+            except Exception as e:
+                print(f"Error adding knowledge from {txt_file.name}: {str(e)}")
         
         # Load the knowledge into the vector database
-        tenancy_agent.load_knowledge()
-        
-        print(f"Successfully loaded {len(sample_knowledge)} knowledge documents for the tenancy FAQ agent")
+        try:
+            tenancy_agent.load_knowledge()
+            print(f"Successfully loaded {knowledge_count} knowledge documents for the tenancy FAQ agent")
+        except Exception as e:
+            print(f"Error loading knowledge into vector database: {str(e)}")
         
     except Exception as e:
         print(f"Error loading initial knowledge: {str(e)}")
-        raise
+        # Don't raise the exception to avoid crashing the server on startup
+        # Just log the error
 
 def create_sample_knowledge() -> Dict[str, Dict[str, str]]:
     """Create sample tenancy knowledge for the agent."""

@@ -3,9 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { FiUser, FiTool, FiMessageCircle } from 'react-icons/fi';
+import { FiUser, FiTool, FiMessageCircle, FiSettings, FiMapPin, FiInfo } from 'react-icons/fi';
 
-const ChatMessage = ({ message, isUser, agent, router }) => {
+const ChatMessage = ({ message, isUser, agent, router, imageUrl, isPartOfContext = true }) => {
   // Determine which agent is responding
   const isIssueAgent = agent === 'issue_detection';
   const isTenancyAgent = agent === 'tenancy_faq';
@@ -14,21 +14,27 @@ const ChatMessage = ({ message, isUser, agent, router }) => {
   const getAgentColorClasses = () => {
     if (isIssueAgent) {
       return {
-        bg: 'bg-issue-agent-light',
-        icon: 'bg-issue-agent text-white',
-        border: 'border-issue-agent',
+        bg: 'bg-blue-50',
+        icon: 'bg-blue-500 text-white',
+        border: 'border-blue-200',
+        text: 'text-blue-600',
+        badge: 'bg-blue-100 border border-blue-200',
       };
     } else if (isTenancyAgent) {
       return {
-        bg: 'bg-tenancy-agent-light',
-        icon: 'bg-tenancy-agent text-white',
-        border: 'border-tenancy-agent',
+        bg: 'bg-green-50',
+        icon: 'bg-green-500 text-white',
+        border: 'border-green-200',
+        text: 'text-green-600',
+        badge: 'bg-green-100 border border-green-200',
       };
     } else {
       return {
         bg: 'bg-gray-100',
         icon: 'bg-gray-700 text-white',
         border: 'border-gray-300',
+        text: 'text-gray-600',
+        badge: 'bg-gray-100 border border-gray-300',
       };
     }
   };
@@ -47,72 +53,108 @@ const ChatMessage = ({ message, isUser, agent, router }) => {
   // Get agent icon
   const getAgentIcon = () => {
     if (isIssueAgent) {
-      return <FiTool className="h-4 w-4" />;
+      return <FiTool className="h-4 w-4 mr-1" />;
     } else if (isTenancyAgent) {
-      return <FiMessageCircle className="h-4 w-4" />;
+      return <FiMessageCircle className="h-4 w-4 mr-1" />;
     } else {
-      return 'P';
+      return <FiInfo className="h-4 w-4 mr-1" />;
     }
   };
   
   const colorClasses = !isUser ? getAgentColorClasses() : {
     bg: 'bg-blue-100',
     icon: 'bg-blue-500 text-white',
-    border: 'border-blue-300',
+    border: 'border-blue-200',
+    text: 'text-blue-600',
+    badge: 'bg-blue-100 border border-blue-200',
   };
   
+  // No need for these since we're handling the image directly
+  // const hasImage = message.includes('*[Image attached]*');
+  // const cleanMessage = message.replace('*[Image attached]*', '').trim();
+  
   return (
-    <div className={`p-4 rounded-lg mb-4 max-w-4xl ${
-      isUser 
-        ? 'bg-blue-100 ml-auto' 
-        : colorClasses.bg
-    } border ${isUser ? 'border-blue-200' : colorClasses.border}`}>
-      <div className="flex items-start">
-        <div className={`rounded-full w-8 h-8 flex items-center justify-center ${
-          isUser 
-            ? 'bg-blue-500 text-white' 
-            : colorClasses.icon
-        }`}>
-          {isUser ? <FiUser className="h-4 w-4" /> : getAgentIcon()}
-        </div>
-        <div className="ml-3 flex-1">
-          <div className="font-semibold flex items-center">
-            {isUser ? 'You' : getAgentName()}
-            
-            {/* Show routing information if available */}
-            {!isUser && router && (
-              <span className="ml-2 text-xs font-normal text-gray-500 bg-gray-100 py-1 px-2 rounded">
-                {router.explanation}
-              </span>
-            )}
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div
+        className={`relative max-w-xl rounded-2xl px-5 py-3 shadow-sm ${
+          isUser
+            ? 'bg-blue-100 text-blue-900 ml-auto rounded-br-2xl'
+            : `${colorClasses.bg} text-gray-900 mr-auto rounded-bl-2xl`
+        }`}
+        style={{ minWidth: 80 }}
+      >
+        {/* Loopot logo in top-left for bot messages */}
+        {!isUser && (
+          <img
+            src="/logo.svg"
+            alt="Loopot Logo"
+            className="absolute -top-4 -left-4 w-8 h-8 rounded-lg shadow border border-white bg-white"
+            style={{ zIndex: 2 }}
+          />
+        )}
+        {/* Display conversation context indicator */}
+        {!isUser && isPartOfContext && (
+          <div className="absolute -left-1 -top-1 w-3 h-3 bg-blue-500 rounded-full" title="Part of conversation context"></div>
+        )}
+      
+        {/* If there's an image, show it first */}
+        {imageUrl && (
+          <div className="mb-2">
+            <img
+              src={imageUrl}
+              alt={isUser ? "User uploaded image" : "Property issue visualization"}
+              className="rounded-lg max-h-60 max-w-full object-contain"
+            />
           </div>
-          <div className="mt-1 prose prose-sm max-w-none">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                code({ node, inline, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      style={dracula}
-                      language={match[1]}
-                      PreTag="div"
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                }
-              }}
-            >
-              {message}
-            </ReactMarkdown>
-          </div>
+        )}
+        
+        {/* Show the message content */}
+        <div className="prose prose-sm break-words">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '');
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={dracula}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+              img({ node, ...props }) {
+                return (
+                  <img
+                    {...props}
+                    className="max-w-full rounded-lg my-2 border border-gray-200"
+                    alt={props.alt || "Image"}
+                  />
+                );
+              },
+            }}
+          >
+            {message}
+          </ReactMarkdown>
         </div>
+        
+        {/* For bot messages, show which agent responded, with colored badge */}
+        {!isUser && agent && (
+          <div className={`mt-2 flex items-center text-xs rounded-full px-3 py-1 gap-1 ${colorClasses.badge} ${colorClasses.text} font-semibold w-fit`}> 
+            {isIssueAgent ? <FiTool className="h-4 w-4 mr-1" /> : null}
+            {isTenancyAgent ? <FiMessageCircle className="h-4 w-4 mr-1" /> : null}
+            <span className="font-medium capitalize">
+              {agent.replace('_', ' ')}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

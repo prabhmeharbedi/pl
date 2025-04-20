@@ -5,7 +5,7 @@ from agno.tools.reasoning import ReasoningTools
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.embedder.openai import OpenAIEmbedder
 from agno.vectordb.lancedb import LanceDb, SearchType
-from agno.memory import ThreadMemory
+from agno.memory import AgentMemory
 from typing import Dict, List, Optional, Any
 
 from config import OPENAI_API_KEY, ANTHROPIC_API_KEY, DEFAULT_MODEL, ALTERNATIVE_MODEL, VECTOR_DB_PATH
@@ -63,7 +63,7 @@ class PBot:
         final_instructions = instructions if instructions else default_instructions
         
         # Set up memory
-        memory = ThreadMemory() if use_memory else None
+        memory = AgentMemory() if use_memory else None
         
         # Set up vector database for knowledge (to be used later)
         vector_db = LanceDb(
@@ -98,11 +98,11 @@ class PBot:
         context = {"session_id": session_id} if session_id else {}
         
         # Get response from agent
-        response = await self.agent.get_async_response(message, context=context)
+        response = await self.agent.arun(message, session_id=session_id)
         
         # Format and return the response
         return {
-            "response": response.response,
+            "response": response.response if hasattr(response, "response") else str(response),
             "tool_calls": response.tool_calls if hasattr(response, "tool_calls") else [],
             "session_id": session_id or "default",
             "model": self.model_id,

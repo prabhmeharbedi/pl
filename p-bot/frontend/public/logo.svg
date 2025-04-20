@@ -1,0 +1,11 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="120" height="120" rx="32" fill="#181A20"/>
+  <!-- Infinite loop symbol -->
+  <path d="M35 60c0-13.8 11.2-25 25-25s25 11.2 25 25-11.2 25-25 25c-7.2 0-13.7-3.1-18.2-8.1" stroke="#7F7FD5" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M85 60c0 13.8-11.2 25-25 25s-25-11.2-25-25 11.2-25 25-25c7.2 0 13.7 3.1 18.2 8.1" stroke="#21D4FD" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Bot face (eyes) -->
+  <circle cx="50" cy="60" r="4" fill="#fff"/>
+  <circle cx="70" cy="60" r="4" fill="#fff"/>
+  <!-- Bot smile -->
+  <path d="M56 74c2 2 6 2 8 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+</svg> 

@@ -7,17 +7,22 @@
   --secondary-color: #1e40af;
   --accent-color: #60a5fa;
   --background-color: #f9fafb;
+  --card-bg: #fff;
+  --header-bg: #fff;
+  --footer-bg: #fff;
   --text-color: #111827;
+  --text-secondary: #6b7280;
   --message-bg-user: #e2e8f0;
   --message-bg-bot: #f1f5f9;
+  --bubble-border: #e5e7eb;
+  --input-bg: #fff;
+  --input-border: #e5e7eb;
 }
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   color: var(--text-color);
   background-color: var(--background-color);
   margin: 0;
@@ -36,6 +41,7 @@ pre {
   border-radius: 0.5rem;
   background-color: #f1f5f9;
   margin: 1rem 0;
+  color: #111827;
 }
 
 /* Style for tables */
@@ -46,7 +52,7 @@ table {
 }
 
 table, th, td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e7eb;
 }
 
 th, td {
@@ -63,5 +69,5 @@ blockquote {
   border-left: 4px solid var(--accent-color);
   padding-left: 1rem;
   margin-left: 0;
-  color: #4b5563;
+  color: #6b7280;
 } 
