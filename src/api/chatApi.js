@@ -7,6 +7,16 @@ const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api/v1` 
   : '/api/v1';
 
+// Create an axios instance with the right configuration
+const apiClient = axios.create({
+  baseURL: API_URL,
+  withCredentials: false, // Important for CORS with different domains
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  }
+});
+
 // Helper function to log API details
 const logAPICall = (method, endpoint, requestData = null, responseData = null, error = null) => {
   console.log(`===== API ${method} ${endpoint} =====`);
@@ -28,17 +38,17 @@ const chatApi = {
    * @returns {Promise<Object>} - The chatbot response
    */
   sendMessage: async (message, sessionId, location = null) => {
-    logAPICall('POST', `${API_URL}/chat`, { message, session_id: sessionId, location });
+    logAPICall('POST', `/chat`, { message, session_id: sessionId, location });
     try {
-      const response = await axios.post(`${API_URL}/chat`, {
+      const response = await apiClient.post('/chat', {
         message,
         session_id: sessionId,
         location,
       });
-      logAPICall('POST', `${API_URL}/chat`, { message, session_id: sessionId, location }, response.data);
+      logAPICall('POST', `/chat`, { message, session_id: sessionId, location }, response.data);
       return response.data;
     } catch (error) {
-      logAPICall('POST', `${API_URL}/chat`, { message, session_id: sessionId, location }, null, error);
+      logAPICall('POST', `/chat`, { message, session_id: sessionId, location }, null, error);
       console.error('Error sending message:', error);
       throw error;
     }
@@ -68,7 +78,7 @@ const chatApi = {
       }
       
       // Send the request with FormData
-      const response = await axios.post(`${API_URL}/chat-with-image`, formData, {
+      const response = await apiClient.post('/chat-with-image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -92,7 +102,7 @@ const chatApi = {
    */
   getAvailableAgents: async () => {
     try {
-      const response = await axios.get(`${API_URL}/agents`);
+      const response = await apiClient.get('/agents');
       return response.data.agents;
     } catch (error) {
       console.error('Error fetching agents:', error);
@@ -106,7 +116,7 @@ const chatApi = {
    */
   getSessions: async () => {
     try {
-      const response = await axios.get(`${API_URL}/sessions`);
+      const response = await apiClient.get('/sessions');
       return response.data;
     } catch (error) {
       console.error('Error fetching sessions:', error);
@@ -121,7 +131,7 @@ const chatApi = {
    */
   getSessionDetails: async (sessionId) => {
     try {
-      const response = await axios.get(`${API_URL}/sessions/${sessionId}`);
+      const response = await apiClient.get(`/sessions/${sessionId}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching session ${sessionId}:`, error);
@@ -136,7 +146,7 @@ const chatApi = {
    */
   deleteSession: async (sessionId) => {
     try {
-      const response = await axios.delete(`${API_URL}/sessions/${sessionId}`);
+      const response = await apiClient.delete(`/sessions/${sessionId}`);
       return response.data;
     } catch (error) {
       console.error(`Error deleting session ${sessionId}:`, error);
@@ -151,7 +161,7 @@ const chatApi = {
    */
   clearSessionMessages: async (sessionId) => {
     try {
-      const response = await axios.delete(`${API_URL}/sessions/${sessionId}/messages`);
+      const response = await apiClient.delete(`/sessions/${sessionId}/messages`);
       return response.data;
     } catch (error) {
       console.error(`Error clearing messages for session ${sessionId}:`, error);

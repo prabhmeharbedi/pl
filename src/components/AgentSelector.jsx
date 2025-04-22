@@ -8,6 +8,16 @@ const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api/v1` 
   : '/api/v1';
 
+// Create an axios instance with the right configuration (same as in chatApi.js)
+const apiClient = axios.create({
+  baseURL: API_URL,
+  withCredentials: false, // Important for CORS with different domains
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  }
+});
+
 const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,15 +30,15 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
     setError(null);
     try {
       console.log("Fetching agents...");
-      // Try with direct Axios call to bypass any issues with the chatApi abstraction
-      const response = await axios.get(`${API_URL}/agents`);
-      console.log("Agents response:", response.data);
-      if (response.data && response.data.agents) {
-        setAgents(response.data.agents);
+      // Use the chatApi method instead of direct axios
+      const agents = await chatApi.getAvailableAgents();
+      console.log("Agents response:", agents);
+      if (agents && agents.length > 0) {
+        setAgents(agents);
         setError(null);
       } else {
         setError('Received invalid response format from agents endpoint');
-        console.error('Invalid response format:', response.data);
+        console.error('Invalid response format:', agents);
       }
     } catch (err) {
       console.error('Error fetching agents:', err);
@@ -38,7 +48,7 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
         const statusEndpoint = import.meta.env.VITE_API_URL 
           ? `${import.meta.env.VITE_API_URL}/api-status`
           : '/api-status';
-        const statusResponse = await axios.get(statusEndpoint);
+        const statusResponse = await apiClient.get(statusEndpoint);
         setDiagnosticInfo(statusResponse.data);
       } catch (statusErr) {
         console.error('Error accessing diagnostic endpoint:', statusErr);
@@ -53,12 +63,11 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
     fetchAgents();
   }, []);
 
+  // If there are no agents but we have an error, show default agents
+  const shouldShowDefaultAgents = error && (agents.length === 0);
+
   if (loading) {
     return <div className="text-sm text-gray-500">Loading agents...</div>;
-  }
-
-  if (error) {
-    return <div className="text-sm text-red-500">{error}</div>;
   }
 
   const getAgentIcon = (agentId) => {
@@ -82,6 +91,23 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
         return 'gray-500';
     }
   };
+
+  // Default agents to show if API fails
+  const defaultAgents = [
+    {
+      id: 'issue_detection',
+      name: 'Issue Detection & Troubleshooting Agent',
+      description: 'Analyzes property images and descriptions to identify issues and provide troubleshooting advice.'
+    },
+    {
+      id: 'tenancy_faq',
+      name: 'Tenancy FAQ Agent', 
+      description: 'Answers questions about tenancy laws, rental agreements, and landlord/tenant responsibilities.'
+    }
+  ];
+
+  // Use actual agents if available, otherwise use default agents
+  const displayAgents = shouldShowDefaultAgents ? defaultAgents : agents;
 
   return (
     <div className="mb-4">
@@ -115,7 +141,7 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
       )}
       
       <div className="grid grid-cols-2 gap-2">
-        {agents.map((agent) => (
+        {displayAgents.map((agent) => (
           <button
             key={agent.id}
             onClick={() => onAgentSelect(agent.id)}
