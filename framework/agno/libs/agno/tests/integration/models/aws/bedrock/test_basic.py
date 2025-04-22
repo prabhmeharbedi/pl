@@ -1,163 +1,183 @@
-from pydantic import BaseModel, Field
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from agno.agent import Agent, RunResponse  # noqa
-from agno.models.aws import AwsBedrock
-from agno.storage.sqlite import SqliteStorage
+import os
+import shutil
+import subprocess
+from typing import Optional
+
+import click
+
+_DOCKERFILE_TEMPLATE = """
+FROM python:3.11-slim
+WORKDIR /app
+
+# Create a non-root user
+RUN adduser --disabled-password --gecos "" myuser
+
+# Change ownership of /app to myuser
+RUN chown -R myuser:myuser /app
+
+# Switch to the non-root user
+USER myuser
+
+# Set up environment variables - Start
+ENV PATH="/home/myuser/.local/bin:$PATH"
+
+ENV GOOGLE_GENAI_USE_VERTEXAI=1
+ENV GOOGLE_CLOUD_PROJECT={gcp_project_id}
+ENV GOOGLE_CLOUD_LOCATION={gcp_region}
+
+# Set up environment variables - End
+
+# Install ADK - Start
+RUN pip install google-adk
+# Install ADK - End
+
+# Copy agent - Start
+
+COPY "agents/{app_name}/" "/app/agents/{app_name}/"
+{install_agent_deps}
+
+# Copy agent - End
+
+EXPOSE {port}
+
+CMD adk {command} --port={port} {trace_to_cloud_option} "/app/agents"
+"""
 
 
-def _assert_metrics(response: RunResponse):
-    input_tokens = response.metrics.get("input_tokens", [])
-    output_tokens = response.metrics.get("output_tokens", [])
-    total_tokens = response.metrics.get("total_tokens", [])
+def _resolve_project(project_in_option: Optional[str]) -> str:
+  if project_in_option:
+    return project_in_option
 
-    assert sum(input_tokens) > 0
-    assert sum(output_tokens) > 0
-    assert sum(total_tokens) > 0
-    assert sum(total_tokens) == sum(input_tokens) + sum(output_tokens)
+  result = subprocess.run(
+      ['gcloud', 'config', 'get-value', 'project'],
+      check=True,
+      capture_output=True,
+      text=True,
+  )
+  project = result.stdout.strip()
+  click.echo(f'Use default project: {project}')
+  return project
 
 
-def test_basic():
-    agent = Agent(
-        model=AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0"), markdown=True, telemetry=False, monitoring=False
+def to_cloud_run(
+    *,
+    agent_folder: str,
+    project: Optional[str],
+    region: Optional[str],
+    service_name: str,
+    app_name: str,
+    temp_folder: str,
+    port: int,
+    trace_to_cloud: bool,
+    with_ui: bool,
+    verbosity: str,
+):
+  """Deploys an agent to Google Cloud Run.
+
+  `agent_folder` should contain the following files:
+
+  - __init__.py
+  - agent.py
+  - requirements.txt (optional, for additional dependencies)
+  - ... (other required source files)
+
+  The folder structure of temp_folder will be
+
+  * dist/[google_adk wheel file]
+  * agents/[app_name]/
+    * agent source code from `agent_folder`
+
+  Args:
+    agent_folder: The folder (absolute path) containing the agent source code.
+    project: Google Cloud project id.
+    region: Google Cloud region.
+    service_name: The service name in Cloud Run.
+    app_name: The name of the app, by default, it's basename of `agent_folder`.
+    temp_folder: The temp folder for the generated Cloud Run source files.
+    port: The port of the ADK api server.
+    trace_to_cloud: Whether to enable Cloud Trace.
+    with_ui: Whether to deploy with UI.
+    verbosity: The verbosity level of the CLI.
+  """
+  app_name = app_name or os.path.basename(agent_folder)
+
+  click.echo(f'Start generating Cloud Run source files in {temp_folder}')
+
+  # remove temp_folder if exists
+  if os.path.exists(temp_folder):
+    click.echo('Removing existing files')
+    shutil.rmtree(temp_folder)
+
+  try:
+    # copy agent source code
+    click.echo('Copying agent source code...')
+    agent_src_path = os.path.join(temp_folder, 'agents', app_name)
+    shutil.copytree(agent_folder, agent_src_path)
+    requirements_txt_path = os.path.join(agent_src_path, 'requirements.txt')
+    install_agent_deps = (
+        f'RUN pip install -r "/app/agents/{app_name}/requirements.txt"'
+        if os.path.exists(requirements_txt_path)
+        else ''
     )
+    click.echo('Copying agent source code complete.')
 
-    # Print the response in the terminal
-    response: RunResponse = agent.run("Share a 2 sentence horror story")
-
-    assert response.content is not None
-    assert len(response.messages) == 3
-    assert [m.role for m in response.messages] == ["system", "user", "assistant"]
-
-    _assert_metrics(response)
-
-
-def test_basic_stream():
-    agent = Agent(
-        model=AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0"), markdown=True, telemetry=False, monitoring=False
+    # create Dockerfile
+    click.echo('Creating Dockerfile...')
+    dockerfile_content = _DOCKERFILE_TEMPLATE.format(
+        gcp_project_id=project,
+        gcp_region=region,
+        app_name=app_name,
+        port=port,
+        command='web' if with_ui else 'api_server',
+        install_agent_deps=install_agent_deps,
+        trace_to_cloud_option='--trace_to_cloud' if trace_to_cloud else '',
     )
+    dockerfile_path = os.path.join(temp_folder, 'Dockerfile')
+    os.makedirs(temp_folder, exist_ok=True)
+    with open(dockerfile_path, 'w', encoding='utf-8') as f:
+      f.write(
+          dockerfile_content,
+      )
+    click.echo(f'Creating Dockerfile complete: {dockerfile_path}')
 
-    response_stream = agent.run("Share a 2 sentence horror story", stream=True)
-
-    # Verify it's an iterator
-    assert hasattr(response_stream, "__iter__")
-
-    responses = list(response_stream)
-    assert len(responses) > 0
-    for response in responses:
-        assert isinstance(response, RunResponse)
-        assert response.content is not None
-
-    _assert_metrics(agent.run_response)
-
-
-def test_with_memory():
-    agent = Agent(
-        model=AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0"),
-        add_history_to_messages=True,
-        telemetry=False,
-        monitoring=False,
-        markdown=True,
+    # Deploy to Cloud Run
+    click.echo('Deploying to Cloud Run...')
+    region_options = ['--region', region] if region else []
+    project = _resolve_project(project)
+    subprocess.run(
+        [
+            'gcloud',
+            'run',
+            'deploy',
+            service_name,
+            '--source',
+            temp_folder,
+            '--project',
+            project,
+            *region_options,
+            '--port',
+            str(port),
+            '--verbosity',
+            verbosity,
+            '--labels',
+            'created-by=adk',
+        ],
+        check=True,
     )
-
-    # First interaction
-    response1 = agent.run("My name is John Smith")
-    assert response1.content is not None
-
-    # Second interaction should remember the name
-    response2 = agent.run("What's my name?")
-    assert "John Smith" in response2.content
-
-    # Verify memories were created
-    assert len(agent.memory.messages) == 5
-    assert [m.role for m in agent.memory.messages] == ["system", "user", "assistant", "user", "assistant"]
-
-    # Test metrics structure and types
-    _assert_metrics(response2)
-
-
-def test_response_model():
-    class MovieScript(BaseModel):
-        title: str = Field(..., description="Movie title")
-        genre: str = Field(..., description="Movie genre")
-        plot: str = Field(..., description="Brief plot summary")
-
-    agent = Agent(
-        model=AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0"),
-        response_model=MovieScript,
-        markdown=True,
-        telemetry=False,
-        monitoring=False,
-    )
-
-    response = agent.run("Create a movie about time travel")
-
-    # Verify structured output
-    assert isinstance(response.content, MovieScript)
-    assert response.content.title is not None
-    assert response.content.genre is not None
-    assert response.content.plot is not None
-
-
-def test_json_response_mode():
-    class MovieScript(BaseModel):
-        title: str = Field(..., description="Movie title")
-        genre: str = Field(..., description="Movie genre")
-        plot: str = Field(..., description="Brief plot summary")
-
-    agent = Agent(
-        model=AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0"),
-        response_model=MovieScript,
-        use_json_mode=True,
-        telemetry=False,
-        monitoring=False,
-    )
-
-    response = agent.run("Create a movie about time travel")
-
-    # Verify structured output
-    assert isinstance(response.content, MovieScript)
-    assert response.content.title is not None
-    assert response.content.genre is not None
-    assert response.content.plot is not None
-
-
-# For backward compatibility
-def test_structured_outputs_deprecated():
-    class MovieScript(BaseModel):
-        title: str = Field(..., description="Movie title")
-        genre: str = Field(..., description="Movie genre")
-        plot: str = Field(..., description="Brief plot summary")
-
-    agent = Agent(
-        model=AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0"),
-        response_model=MovieScript,
-        structured_outputs=False,  # They don't support native structured outputs
-        telemetry=False,
-        monitoring=False,
-    )
-
-    response = agent.run("Create a movie about time travel")
-
-    # Verify structured output
-    assert isinstance(response.content, MovieScript)
-    assert response.content.title is not None
-    assert response.content.genre is not None
-    assert response.content.plot is not None
-
-
-def test_history():
-    agent = Agent(
-        model=AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0"),
-        storage=SqliteStorage(table_name="agent_sessions", db_file="tmp/agent_storage.db"),
-        add_history_to_messages=True,
-        telemetry=False,
-        monitoring=False,
-    )
-    agent.run("Hello")
-    assert len(agent.run_response.messages) == 2
-    agent.run("Hello 2")
-    assert len(agent.run_response.messages) == 4
-    agent.run("Hello 3")
-    assert len(agent.run_response.messages) == 6
-    agent.run("Hello 4")
-    assert len(agent.run_response.messages) == 8
+  finally:
+    click.echo(f'Cleaning up the temp folder: {temp_folder}')
+    shutil.rmtree(temp_folder)
