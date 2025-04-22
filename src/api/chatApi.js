@@ -13,9 +13,29 @@ const apiClient = axios.create({
   withCredentials: false, // Important for CORS with different domains
   headers: {
     "Content-Type": "application/json",
-    "Accept": "application/json"
-  }
+    "Accept": "application/json",
+    "Access-Control-Allow-Origin": "*" // Request header for CORS
+  },
+  timeout: 10000, // 10 second timeout
 });
+
+// Add request interceptor for debugging
+apiClient.interceptors.request.use(config => {
+  console.log('Request:', config.method.toUpperCase(), config.baseURL + config.url);
+  return config;
+});
+
+// Add response interceptor for debugging
+apiClient.interceptors.response.use(
+  response => {
+    console.log('Response success:', response.status);
+    return response;
+  },
+  error => {
+    console.log('Response error:', error.message);
+    return Promise.reject(error);
+  }
+);
 
 // Helper function to log API details
 const logAPICall = (method, endpoint, requestData = null, responseData = null, error = null) => {
@@ -30,6 +50,39 @@ const logAPICall = (method, endpoint, requestData = null, responseData = null, e
 console.log('Using API URL:', API_URL);
 
 const chatApi = {
+  /**
+   * Get available specialized agents
+   * @returns {Promise<Object>} - The list of available agents
+   */
+  getAvailableAgents: async () => {
+    try {
+      // First try using the regular client
+      try {
+        const response = await apiClient.get('/agents');
+        return response.data.agents;
+      } catch (firstError) {
+        console.error('First attempt to fetch agents failed:', firstError.message);
+        
+        // If that fails, try a direct fetch with no-cors mode as fallback
+        console.log('Trying direct fetch as fallback...');
+        const directResponse = await fetch(`${API_URL.split('/api/v1')[0]}/api/v1/agents`, {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
+        
+        if (!directResponse.ok) throw new Error(`HTTP error! status: ${directResponse.status}`);
+        const data = await directResponse.json();
+        return data.agents;
+      }
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+      throw error;
+    }
+  },
+
   /**
    * Send a text message to the chatbot API
    * @param {string} message - The user message
@@ -92,20 +145,6 @@ const chatApi = {
       return response.data;
     } catch (error) {
       console.error('Error sending message with image:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get available specialized agents
-   * @returns {Promise<Object>} - The list of available agents
-   */
-  getAvailableAgents: async () => {
-    try {
-      const response = await apiClient.get('/agents');
-      return response.data.agents;
-    } catch (error) {
-      console.error('Error fetching agents:', error);
       throw error;
     }
   },

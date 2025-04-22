@@ -18,6 +18,20 @@ const apiClient = axios.create({
   }
 });
 
+// Default agents to show if API fails
+const defaultAgents = [
+  {
+    id: 'issue_detection',
+    name: 'Issue Detection & Troubleshooting Agent',
+    description: 'Analyzes property images and descriptions to identify issues and provide troubleshooting advice.'
+  },
+  {
+    id: 'tenancy_faq',
+    name: 'Tenancy FAQ Agent', 
+    description: 'Answers questions about tenancy laws, rental agreements, and landlord/tenant responsibilities.'
+  }
+];
+
 const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,12 +51,16 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
         setAgents(agents);
         setError(null);
       } else {
-        setError('Received invalid response format from agents endpoint');
-        console.error('Invalid response format:', agents);
+        console.warn('Received empty or invalid agents array, using defaults');
+        setAgents(defaultAgents);
+        setError('No agents returned from API, using defaults');
       }
     } catch (err) {
       console.error('Error fetching agents:', err);
       setError('Failed to load available agents: ' + (err.message || 'Unknown error'));
+      // Always set to default agents on error
+      setAgents(defaultAgents);
+      
       // Try to access the diagnostic endpoint
       try {
         const statusEndpoint = import.meta.env.VITE_API_URL 
@@ -62,9 +80,6 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
   useEffect(() => {
     fetchAgents();
   }, []);
-
-  // If there are no agents but we have an error, show default agents
-  const shouldShowDefaultAgents = error && (agents.length === 0);
 
   if (loading) {
     return <div className="text-sm text-gray-500">Loading agents...</div>;
@@ -92,22 +107,8 @@ const AgentSelector = ({ onAgentSelect, selectedAgent }) => {
     }
   };
 
-  // Default agents to show if API fails
-  const defaultAgents = [
-    {
-      id: 'issue_detection',
-      name: 'Issue Detection & Troubleshooting Agent',
-      description: 'Analyzes property images and descriptions to identify issues and provide troubleshooting advice.'
-    },
-    {
-      id: 'tenancy_faq',
-      name: 'Tenancy FAQ Agent', 
-      description: 'Answers questions about tenancy laws, rental agreements, and landlord/tenant responsibilities.'
-    }
-  ];
-
-  // Use actual agents if available, otherwise use default agents
-  const displayAgents = shouldShowDefaultAgents ? defaultAgents : agents;
+  // Always display agents (fetched or default)
+  const displayAgents = agents;
 
   return (
     <div className="mb-4">
