@@ -100,6 +100,7 @@ ALLOW_ORIGINS = [
     "http://localhost:5175",
     "http://localhost:5176",
     "http://localhost:5177",
+    "https://loopot.vercel.app",
 ]
 
 # Ensure necessary directories exist
