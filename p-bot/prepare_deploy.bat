@@ -1,0 +1,3 @@
+@echo off
+echo Framework files already in backend/framework directory!
+echo No preparation needed, proceeding with deployment... 

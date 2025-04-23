@@ -1,12 +1,15 @@
 @echo off
 setlocal
 
-REM Configuration
-set PROJECT_ID=your-project-id
+REM Configuration with the correct project ID
+set PROJECT_ID=835103152018
 set SERVICE_NAME=loopot
 set REGION=us-central1
 
 cd ..
+echo Running prepare_deploy script to copy framework files...
+call prepare_deploy.bat
+
 echo Building and deploying to Google Cloud Run...
 echo Project: %PROJECT_ID%
 echo Service: %SERVICE_NAME%

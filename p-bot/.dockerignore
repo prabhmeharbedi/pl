@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.git/
+uploads/
+tmp/
+backend/uploads/
+backend/tmp/
+.env
+backend/.env
+**/node_modules/ 

@@ -3,19 +3,14 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Copy backend code
+# Copy backend code (including framework files that are already in backend/framework)
 COPY backend/ .
 
-# Copy framework code
-COPY ../framework/agno/libs/agno /app/framework/agno/libs/agno
-COPY ../framework/adk-python /app/framework/adk-python
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Set PYTHONPATH so Python can find the framework modules
-ENV PYTHONPATH="/app/framework/agno/libs/agno:/app/framework/adk-python:${PYTHONPATH}"
-
-# Install dependencies
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONPATH="/app/framework:/app/framework/agno:/app/framework/adk-python:${PYTHONPATH}"
 
 EXPOSE 8080
 
